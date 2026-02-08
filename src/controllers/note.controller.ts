@@ -8,8 +8,10 @@ export const createNote = asyncHandler(async (req: Request, res: Response) => {
   res.status(201).json(note);
 });
 
-export const getAllNotes = asyncHandler(async (_req: Request, res: Response) => {
-  const notes = await noteService.getAllNotes();
+export const getAllNotes = asyncHandler(async (req: Request, res: Response) => {
+  const tag = req.query.tag as string | undefined;
+  const search = req.query.search as string | undefined;
+  const notes = await noteService.getAllNotes(tag, search);
   res.status(200).json(notes);
 });
 
@@ -37,6 +39,17 @@ export const deleteNote = asyncHandler(async (req: Request, res: Response) => {
 export const toggleFavorite = asyncHandler(async (req: Request, res: Response) => {
   const id = req.params.id as string;
   const note = await noteService.toggleFavorite(id);
+  if (!note) {
+    res.status(404).json({ error: "Note not found" });
+    return;
+  }
+  res.status(200).json(note);
+});
+
+export const addTagToNote = asyncHandler(async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const { name } = req.body as { name: string };
+  const note = await noteService.addTagToNote(id, name);
   if (!note) {
     res.status(404).json({ error: "Note not found" });
     return;

@@ -13,4 +13,11 @@ model Note {
   content    String
   isFavorite Boolean  @default(false)
   createdAt  DateTime @default(now())
+  tags       Tag[]
+}
+
+model Tag {
+  id    String @id @default(uuid())
+  name  String @unique
+  notes Note[]
 }

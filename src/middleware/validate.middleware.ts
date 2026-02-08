@@ -24,3 +24,18 @@ export const validateCreateNote = (
 
   next();
 };
+
+export const validateTagName = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void => {
+  const { name } = req.body as Record<string, unknown>;
+
+  if (!name || typeof name !== "string" || name.trim().length === 0) {
+    res.status(400).json({ errors: ["name is required"] });
+    return;
+  }
+
+  next();
+};
