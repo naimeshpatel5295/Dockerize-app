@@ -9,6 +9,10 @@
     "start": "node dist/server.js",
     "start:prod": "NODE_ENV=production node dist/server.js",
     "lint": "eslint src/**/*.ts",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "docker:test": "sh scripts/docker-test.sh",
+    "compose:test": "sh scripts/compose-test.sh",
     "prisma:migrate": "npx prisma migrate dev",
     "prisma:generate": "npx prisma generate"
   },
@@ -23,12 +27,17 @@
   "devDependencies": {
     "@eslint/js": "^9.39.2",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^25.2.2",
     "@types/pg": "^8.16.0",
+    "@types/supertest": "^6.0.3",
     "dotenv": "^17.2.4",
     "eslint": "^9.39.2",
+    "jest": "^30.2.0",
     "nodemon": "^3.1.11",
     "prisma": "^7.3.0",
+    "supertest": "^7.2.2",
+    "ts-jest": "^29.4.6",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0"

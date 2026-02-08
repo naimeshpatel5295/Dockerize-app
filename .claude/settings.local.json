@@ -6,7 +6,8 @@
       "Bash(npx prisma generate:*)",
       "Bash(PORT=5000 DATABASE_URL=postgresql://x:x@localhost:5432/x timeout 4 node:*)",
       "Bash(docker build:*)",
-      "Bash(docker compose config:*)"
+      "Bash(docker compose config:*)",
+      "Bash(npx jest --verbose)"
     ]
   }
 }
