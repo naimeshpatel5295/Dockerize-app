@@ -1,7 +1,9 @@
 {
   "permissions": {
     "allow": [
-      "Bash(timeout:*)"
+      "Bash(timeout:*)",
+      "Bash(npx prisma init:*)",
+      "Bash(npx prisma generate:*)"
     ]
   }
 }

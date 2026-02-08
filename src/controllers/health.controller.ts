@@ -1,5 +1,11 @@
 import { Request, Response } from "express";
+import prisma from "../config/db";
 
-export const getHealth = (_req: Request, res: Response): void => {
-  res.status(200).json({ status: "ok" });
+export const getHealth = async (_req: Request, res: Response): Promise<void> => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.status(200).json({ status: "ok", db: "connected" });
+  } catch {
+    res.status(500).json({ status: "error", db: "disconnected" });
+  }
 };
