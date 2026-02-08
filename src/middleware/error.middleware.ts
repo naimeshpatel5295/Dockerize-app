@@ -12,8 +12,15 @@ export const errorHandler = (
 ): void => {
   console.error(err.stack);
 
-  const statusCode = "statusCode" in err ? (err as Error & { statusCode: number }).statusCode : 500;
+  const statusCode =
+    "statusCode" in err
+      ? (err as Error & { statusCode: number }).statusCode
+      : 500;
+
   res.status(statusCode).json({
-    error: err.message || "Internal Server Error",
+    error:
+      process.env.NODE_ENV === "production"
+        ? "Internal Server Error"
+        : err.message || "Internal Server Error",
   });
 };
