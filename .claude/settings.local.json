@@ -4,7 +4,8 @@
       "Bash(timeout:*)",
       "Bash(npx prisma init:*)",
       "Bash(npx prisma generate:*)",
-      "Bash(PORT=5000 DATABASE_URL=postgresql://x:x@localhost:5432/x timeout 4 node:*)"
+      "Bash(PORT=5000 DATABASE_URL=postgresql://x:x@localhost:5432/x timeout 4 node:*)",
+      "Bash(docker build:*)"
     ]
   }
 }
