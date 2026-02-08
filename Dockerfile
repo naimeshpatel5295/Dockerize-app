@@ -5,18 +5,18 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# 1. Copy dependency manifests (layer cache)
+# Copy dependency manifests (layer cache)
 COPY package.json package-lock.json ./
 
-# 2. Install ALL dependencies (dev + prod)
+# Install ALL dependencies (dev + prod)
 RUN npm ci
 
-# 3. Copy Prisma schema + config and generate client
+# Copy Prisma schema + config and generate client
 COPY prisma ./prisma
 COPY prisma.config.ts ./
 RUN npx prisma generate
 
-# 4. Copy source code and build
+# Copy source code and build
 COPY tsconfig.json ./
 COPY src ./src
 RUN npm run build
@@ -28,28 +28,34 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# 1. Copy dependency manifests
+# Copy dependency manifests
 COPY package.json package-lock.json ./
 
-# 2. Install production dependencies ONLY
+# Install production dependencies only (includes prisma CLI for migrations)
 RUN npm ci --omit=dev
 
-# 3. Copy compiled output and prisma schema from builder
+# Copy compiled output, prisma schema + config from builder
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
 
-# 4. Set environment
+# Copy startup script
+COPY scripts/start.sh ./start.sh
+
+# Environment
 ENV NODE_ENV=production
 
-# 5. Create non-root user
+# Create non-root user
 RUN addgroup -S appgroup && \
-    adduser -S appuser -G appgroup
+    adduser -S appuser -G appgroup && \
+    chown -R appuser:appgroup /app && \
+    chmod +x start.sh
 
-# 6. Switch to non-root user
+# Use non-root user
 USER appuser
 
-# 7. Expose port
+# Expose API port
 EXPOSE 5000
 
-# 8. Start app
-CMD ["node", "dist/server.js"]
+# Start container
+CMD ["./start.sh"]

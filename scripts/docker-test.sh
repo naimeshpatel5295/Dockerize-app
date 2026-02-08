@@ -1,38 +1,62 @@
-#!/bin/sh
-set -e
 
-IMAGE_NAME="devnotes-app"
-CONTAINER_NAME="devnotes-test"
+#!/bin/bash
 
-echo "=== Docker Image Test ==="
+echo "=== Docker Compose Test ==="
 
-echo "1) Building image..."
-docker build -t $IMAGE_NAME .
+echo "1) Building images..."
+docker-compose build
 
-echo "2) Starting container..."
-docker run -d \
-  -p 5000:5000 \
-  -e PORT=5000 \
-  -e DATABASE_URL=postgresql://postgres:password@host.docker.internal:5432/devnotes \
-  --name $CONTAINER_NAME \
-  $IMAGE_NAME
+echo "2) Starting services (app + database)..."
+docker-compose down -v >/dev/null 2>&1 || true
+docker-compose up -d
 
-echo "3) Waiting 10 seconds for startup..."
-sleep 10
+echo "3) Waiting for services to be healthy..."
+echo "   - Waiting for database..."
+timeout=30
+elapsed=0
+while [ $elapsed -lt $timeout ]; do
+  if docker-compose exec -T db pg_isready -U postgres -d devnotes >/dev/null 2>&1; then
+    echo "   ✓ Database is ready"
+    break
+  fi
+  sleep 2
+  elapsed=$((elapsed + 2))
+done
+
+echo "   - Waiting for application (15 seconds)..."
+sleep 15
 
 echo "4) Testing health endpoint..."
-STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:5000/health)
+RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 5 http://localhost:5000/health || echo "000")
 
-echo "5) Cleaning up..."
-docker stop $CONTAINER_NAME
-docker rm $CONTAINER_NAME
-
-if [ "$STATUS" = "200" ] || [ "$STATUS" = "500" ]; then
+if [ "$RESPONSE" = "200" ]; then
+  echo "✓ PASS: Application is healthy (HTTP $RESPONSE)"
   echo ""
-  echo "PASS: Container started and responded (HTTP $STATUS)"
+  echo "5) Application logs:"
+  docker-compose logs app | tail -20
+  echo ""
+  echo "6) Cleaning up..."
+  docker-compose down -v >/dev/null 2>&1
   exit 0
-else
+elif [ "$RESPONSE" = "500" ]; then
+  echo "⚠ PARTIAL: Application responded but database may be disconnected (HTTP $RESPONSE)"
   echo ""
-  echo "FAIL: Expected HTTP 200 or 500, got $STATUS"
+  echo "5) Application logs:"
+  docker-compose logs app
+  echo ""
+  echo "6) Cleaning up..."
+  docker-compose down -v >/dev/null 2>&1
+  exit 1
+else
+  echo "✗ FAIL: Application did not respond (HTTP $RESPONSE)"
+  echo ""
+  echo "5) Application logs:"
+  docker-compose logs app
+  echo ""
+  echo "6) Database logs:"
+  docker-compose logs db | tail -10
+  echo ""
+  echo "7) Cleaning up..."
+  docker-compose down -v >/dev/null 2>&1
   exit 1
 fi
