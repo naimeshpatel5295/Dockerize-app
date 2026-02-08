@@ -11,5 +11,9 @@ export const errorHandler = (
   _next: NextFunction
 ): void => {
   console.error(err.stack);
-  res.status(500).json({ error: "Internal Server Error" });
+
+  const statusCode = "statusCode" in err ? (err as Error & { statusCode: number }).statusCode : 500;
+  res.status(statusCode).json({
+    error: err.message || "Internal Server Error",
+  });
 };
