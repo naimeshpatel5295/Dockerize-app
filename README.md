@@ -172,6 +172,19 @@ Note                            Tag
 +------------+----------+
 ```
 
+## Monitoring & Observability
+
+The stack includes Prometheus and Grafana for monitoring and observability.
+
+- **Prometheus** scrapes the `/metrics` endpoint from the Node API every 5 seconds, collecting HTTP request durations, status codes, and default Node.js runtime metrics.
+- **Grafana** connects to Prometheus as a data source and provides dashboards for visualizing application performance and health.
+
+| Service    | URL                      | Notes             |
+| ---------- | ------------------------ | ----------------- |
+| API        | http://localhost:5000    | Node.js REST API  |
+| Prometheus | http://localhost:9090    | Metrics explorer  |
+| Grafana    | http://localhost:3001    | Login: admin/admin |
+
 ## License
 
 ISC
