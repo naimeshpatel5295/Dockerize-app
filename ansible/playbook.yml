@@ -1,0 +1,10 @@
+---
+# Ansible Playbook
+# Define your automation tasks here
+
+- name: Example Playbook
+  hosts: all
+  tasks:
+    - name: Example task
+      debug:
+        msg: "Hello from Ansible"
