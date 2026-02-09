@@ -5,6 +5,9 @@ on:
     branches: ["main"]
 
 jobs:
+  # ===============================
+  # CI JOB — TEST + BUILD + PUSH
+  # ===============================
   test-build-push:
     runs-on: ubuntu-latest
 
@@ -40,3 +43,38 @@ jobs:
 
       - name: Push Docker image
         run: docker push naimeshpatel5295/devnotes-app:latest
+
+
+  # ===============================
+  # CD JOB — AUTO DEPLOY TO EC2
+  # ===============================
+  deploy:
+    needs: test-build-push
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🚀 Starting deployment..."
+
+            # Pull latest image from Docker Hub
+            docker pull naimeshpatel5295/devnotes-app:latest
+
+            # Stop and remove old container if exists
+            docker stop devnotes-app || true
+            docker rm devnotes-app || true
+
+            # Run new container
+            docker run -d \
+              --name devnotes-app \
+              -p 5000:5000 \
+              -e PORT=5000 \
+              -e DATABASE_URL=postgresql://postgres:password@172.17.0.1:5432/devnotes \
+              naimeshpatel5295/devnotes-app:latest
+
+            echo "✅ Deployment completed!"
