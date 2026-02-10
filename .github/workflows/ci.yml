@@ -12,40 +12,51 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # Checkout repo
       - name: Checkout repo
         uses: actions/checkout@v4
 
+      # Setup Node
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
+      # Install deps
       - name: Install dependencies
         run: npm ci
 
+      # Prisma client
       - name: Generate Prisma Client
         run: npm run prisma:generate
 
+      # Unit tests
       - name: Run unit tests
         run: npm test
 
+      # Integration test using docker compose
       - name: Run Docker Compose integration test
-        run: npm run compose:test
+        run: |
+          docker compose up -d
+          sleep 20
+          docker compose ps
+          docker compose down
 
-      # Login to Docker Hub
+      # 🔐 Login to Docker Hub (ACCESS TOKEN)
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      # Build image
+      # 🐳 Build image
       - name: Build Docker image
-        run: docker build -t naimeshpatel5295/devnotes-app:latest .
+        run: docker build -t naimeshpatel/devnotes:latest .
 
-      # Push image
+      # 🚀 Push image
       - name: Push Docker image
-        run: docker push naimeshpatel5295/devnotes-app:latest
+        run: docker push naimeshpatel/devnotes:latest
+
 
 
 # =====================================================
@@ -69,20 +80,15 @@ jobs:
           script: |
             echo "🚀 Starting deployment..."
 
-            # Pull latest image from Docker Hub
-            docker pull naimeshpatel5295/devnotes-app:latest
+            # Pull latest image
+            docker pull naimeshpatel/devnotes:latest
 
-            # Stop and remove old container if exists
-            docker stop devnotes-app || true
-            docker rm devnotes-app || true
+            # Go to app folder
+            cd /home/ec2-user/app
 
-            # Run new container
-            docker run -d \
-              --name devnotes-app \
-              -p 5000:5000 \
-              -e PORT=5000 \
-              -e DATABASE_URL=postgresql://postgres:password@172.17.0.1:5432/devnotes \
-              --restart unless-stopped \
-              naimeshpatel5295/devnotes-app:latest
+            # Restart full docker compose stack
+            docker compose down
+            docker compose pull
+            docker compose up -d
 
             echo "✅ Deployment completed!"
