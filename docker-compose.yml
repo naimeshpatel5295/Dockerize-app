@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   db:
@@ -23,7 +22,7 @@ services:
 
   # 🚀 PRODUCTION: pull image from DockerHub (no build on EC2)
   app:
-    image: naimeshpatel/devnotes:latest
+    image: naimeshpatel5295/devnotes:latest
     restart: unless-stopped
     ports:
       - "5000:5000"
