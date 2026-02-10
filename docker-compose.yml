@@ -20,8 +20,8 @@ services:
     networks:
       - app-network
 
-  # 🚀 PRODUCTION: pull image from DockerHub (no build on EC2)
   app:
+    build: .
     image: naimeshpatel5295/devnotes:latest
     restart: unless-stopped
     ports:

@@ -37,7 +37,7 @@ jobs:
       # Integration test using docker compose
       - name: Run Docker Compose integration test
         run: |
-          docker compose up -d
+          docker compose up -d --build
           sleep 20
           docker compose ps
           docker compose down
@@ -51,11 +51,11 @@ jobs:
 
       # 🐳 Build image
       - name: Build Docker image
-        run: docker build -t naimeshpatel/devnotes:latest .
+        run: docker build -t naimeshpatel5295/devnotes:latest .
 
       # 🚀 Push image
       - name: Push Docker image
-        run: docker push naimeshpatel/devnotes:latest
+        run: docker push naimeshpatel5295/devnotes:latest
 
 
 
@@ -81,7 +81,7 @@ jobs:
             echo "🚀 Starting deployment..."
 
             # Pull latest image
-            docker pull naimeshpatel/devnotes:latest
+            docker pull naimeshpatel5295/devnotes:latest
 
             # Go to app folder
             cd /home/ec2-user/app
