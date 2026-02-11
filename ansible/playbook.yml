@@ -47,6 +47,21 @@
         force: yes
 
     # -------------------------------------------------
+    # 🧹 3.5️⃣ CLEAN OLD DOCKER DATA (DISK FIX)
+    # -------------------------------------------------
+    - name: Remove stopped containers
+      command: docker container prune -f
+
+    - name: Remove dangling images
+      command: docker image prune -f
+
+    - name: Remove unused volumes
+      command: docker volume prune -f
+
+    - name: Remove docker build cache
+      command: docker builder prune -f
+
+    # -------------------------------------------------
     # 4️⃣ Pull latest Docker image
     # -------------------------------------------------
     - name: Pull latest image
