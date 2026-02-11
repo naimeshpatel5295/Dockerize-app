@@ -37,7 +37,7 @@
         msg: "Deploying to {{ next_env }} environment"
 
     # -------------------------------------------------
-    # ⭐ 3️⃣ Pull latest project code on EC2 (VERY IMPORTANT)
+    # ⭐ 3️⃣ Pull latest project code on EC2
     # -------------------------------------------------
     - name: Pull latest project repo
       git:
@@ -53,7 +53,7 @@
       command: docker pull naimeshpatel5295/devnotes:latest
 
     # -------------------------------------------------
-    # 5️⃣ Start NEW environment
+    # 5️⃣ Start NEW environment (Blue/Green)
     # -------------------------------------------------
     - name: Start new environment container
       command: docker compose up -d app_{{ next_env }}
@@ -89,16 +89,18 @@
         chdir: "{{ app_dir }}"
 
     # -------------------------------------------------
-    # 8️⃣ Stop OLD environment safely
+    # 8️⃣ Stop OLD environment (proper compose way)
     # -------------------------------------------------
-    - name: Stop old environment container
+    - name: Stop old environment service
       block:
-        - name: Stop old container
-          command: docker stop app_{{ active_env.stdout }}
+        - name: Stop old compose service
+          command: docker compose stop app_{{ active_env.stdout }}
+          args:
+            chdir: "{{ app_dir }}"
       rescue:
-        - name: Old container already stopped
+        - name: Old environment already stopped or missing
           debug:
-            msg: "Container app_{{ active_env.stdout }} was not running, skipping stop."
+            msg: "Service app_{{ active_env.stdout }} was not running, skipping stop."
 
     # -------------------------------------------------
     # 9️⃣ Save new active environment
