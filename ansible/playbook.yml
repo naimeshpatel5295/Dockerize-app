@@ -28,7 +28,6 @@
       debug:
         msg: "Current active env is {{ active_env.stdout }}"
 
-    # Decide next environment
     - name: Decide next environment
       set_fact:
         next_env: "{{ 'green' if active_env.stdout == 'blue' else 'blue' }}"
@@ -38,13 +37,23 @@
         msg: "Deploying to {{ next_env }} environment"
 
     # -------------------------------------------------
-    # 3️⃣ Pull latest Docker image
+    # ⭐ 3️⃣ Pull latest project code on EC2 (VERY IMPORTANT)
+    # -------------------------------------------------
+    - name: Pull latest project repo
+      git:
+        repo: https://github.com/naimeshpatel5295/Dockerize-app.git
+        dest: "{{ app_dir }}"
+        version: main
+        force: yes
+
+    # -------------------------------------------------
+    # 4️⃣ Pull latest Docker image
     # -------------------------------------------------
     - name: Pull latest image
       command: docker pull naimeshpatel5295/devnotes:latest
 
     # -------------------------------------------------
-    # 4️⃣ Start NEW environment
+    # 5️⃣ Start NEW environment
     # -------------------------------------------------
     - name: Start new environment container
       command: docker compose up -d app_{{ next_env }}
@@ -52,7 +61,7 @@
         chdir: "{{ app_dir }}"
 
     # -------------------------------------------------
-    # 5️⃣ Wait for new app to become ready
+    # 6️⃣ Wait for new app to become ready
     # -------------------------------------------------
     - name: Wait for new app to start
       wait_for:
@@ -62,7 +71,7 @@
         timeout: 60
 
     # -------------------------------------------------
-    # 6️⃣ Switch NGINX traffic
+    # 7️⃣ Switch NGINX traffic
     # -------------------------------------------------
     - name: Switch Nginx upstream
       shell: |
@@ -80,7 +89,7 @@
         chdir: "{{ app_dir }}"
 
     # -------------------------------------------------
-    # 7️⃣ Stop OLD environment
+    # 8️⃣ Stop OLD environment safely
     # -------------------------------------------------
     - name: Stop old environment container
       block:
@@ -92,7 +101,7 @@
             msg: "Container app_{{ active_env.stdout }} was not running, skipping stop."
 
     # -------------------------------------------------
-    # 8️⃣ Save new active environment
+    # 9️⃣ Save new active environment
     # -------------------------------------------------
     - name: Save new active environment
       copy:
