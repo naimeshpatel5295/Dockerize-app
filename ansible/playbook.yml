@@ -1,77 +1,100 @@
-- name: Setup EC2 and deploy application
-  hosts: production
+- name: Blue Green Deployment
+  hosts: web
   become: true
 
   vars:
-    docker_username: "{{ lookup('env', 'DOCKERHUB_USERNAME') }}"
-    docker_password: "{{ lookup('env', 'DOCKERHUB_TOKEN') }}"
+    app_dir: /home/ec2-user/app
+    active_file: /home/ec2-user/active_env
 
   tasks:
-    - name: Update packages
-      yum:
-        name: "*"
-        state: latest
 
-    - name: Install Docker
-      yum:
-        name: docker
-        state: present
+    # -------------------------------------------------
+    # 1️⃣ Ensure active_env file exists (default blue)
+    # -------------------------------------------------
+    - name: Ensure active_env file exists
+      copy:
+        dest: "{{ active_file }}"
+        content: "blue"
+        force: no
 
-    - name: Start Docker service
-      service:
-        name: docker
-        state: started
-        enabled: true
+    # -------------------------------------------------
+    # 2️⃣ Read which environment is active
+    # -------------------------------------------------
+    - name: Read active environment
+      command: cat {{ active_file }}
+      register: active_env
 
-    - name: Add ec2-user to docker group
-      user:
-        name: ec2-user
-        groups: docker
-        append: yes
+    - name: Show current active env
+      debug:
+        msg: "Current active env is {{ active_env.stdout }}"
 
-    - name: Login to Docker Hub
-      command: docker login -u {{ docker_username }} -p {{ docker_password }}
+    # Decide next environment
+    - name: Decide next environment
+      set_fact:
+        next_env: "{{ 'green' if active_env.stdout == 'blue' else 'blue' }}"
 
-    - name: Install Git
-      yum:
-        name: git
-        state: present
+    - name: Show next env
+      debug:
+        msg: "Deploying to {{ next_env }} environment"
 
-    - name: Create docker cli plugins directory
-      file:
-        path: /usr/libexec/docker/cli-plugins
-        state: directory
-        mode: '0755'
+    # -------------------------------------------------
+    # 3️⃣ Pull latest Docker image
+    # -------------------------------------------------
+    - name: Pull latest image
+      command: docker pull naimeshpatel5295/devnotes:latest
 
-    - name: Install Docker Compose v2 plugin
-      get_url:
-        url: https://github.com/docker/compose/releases/latest/download/docker-compose-linux-x86_64
-        dest: /usr/libexec/docker/cli-plugins/docker-compose
-        mode: '0755'
-
-    - name: Enable Docker Buildx
-      command: docker buildx install
-
-    - name: Clone or update project repo
-      git:
-        repo: https://github.com/naimeshpatel5295/Dockerize-app.git
-        dest: /home/ec2-user/app
-        version: main
-        force: yes
-        update: yes
-
-    - name: Stop old containers if any
-      command: docker compose down
+    # -------------------------------------------------
+    # 4️⃣ Start NEW environment
+    # -------------------------------------------------
+    - name: Start new environment container
+      command: docker compose up -d app_{{ next_env }}
       args:
-        chdir: /home/ec2-user/app
-      ignore_errors: true
+        chdir: "{{ app_dir }}"
 
-    - name: Pull latest Docker images
-      command: docker compose pull
-      args:
-        chdir: /home/ec2-user/app
+    # -------------------------------------------------
+    # 5️⃣ Wait for new app to become ready
+    # -------------------------------------------------
+    - name: Wait for new app to start
+      wait_for:
+        host: localhost
+        port: "{{ '5002' if next_env == 'green' else '5001' }}"
+        delay: 10
+        timeout: 60
 
-    - name: Run Docker Compose
-      command: docker compose up -d
+    # -------------------------------------------------
+    # 6️⃣ Switch NGINX traffic
+    # -------------------------------------------------
+    - name: Switch Nginx upstream
+      shell: |
+        if [ "{{ next_env }}" = "green" ]; then
+          sed -i 's/server app_blue:5000/# server app_blue:5000/' {{ app_dir }}/nginx/default.conf
+          sed -i 's/# server app_green:5000/server app_green:5000/' {{ app_dir }}/nginx/default.conf
+        else
+          sed -i 's/server app_green:5000/# server app_green:5000/' {{ app_dir }}/nginx/default.conf
+          sed -i 's/# server app_blue:5000/server app_blue:5000/' {{ app_dir }}/nginx/default.conf
+        fi
+
+    - name: Reload nginx container
+      command: docker compose restart nginx
       args:
-        chdir: /home/ec2-user/app
+        chdir: "{{ app_dir }}"
+
+    # -------------------------------------------------
+    # 7️⃣ Stop OLD environment
+    # -------------------------------------------------
+    - name: Stop old environment container
+      block:
+        - name: Stop old container
+          command: docker stop app_{{ active_env.stdout }}
+      rescue:
+        - name: Old container already stopped
+          debug:
+            msg: "Container app_{{ active_env.stdout }} was not running, skipping stop."
+
+    # -------------------------------------------------
+    # 8️⃣ Save new active environment
+    # -------------------------------------------------
+    - name: Save new active environment
+      copy:
+        dest: "{{ active_file }}"
+        content: "{{ next_env }}"
