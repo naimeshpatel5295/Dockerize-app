@@ -1,13 +1,12 @@
-name: CI/CD Pipeline
+name: CI - Test, Build & Push Image
 
 on:
   push:
     branches: ["main"]
+  pull_request:
+    branches: ["main"]
 
 jobs:
-# =====================================================
-# 🧪 CI JOB — TEST → BUILD → PUSH IMAGE TO DOCKER HUB
-# =====================================================
   test-build-push:
     runs-on: ubuntu-latest
 
@@ -42,7 +41,7 @@ jobs:
           docker compose ps
           docker compose down
 
-      # 🔐 Login to Docker Hub (ACCESS TOKEN)
+      # 🔐 Login to Docker Hub
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
@@ -56,39 +55,3 @@ jobs:
       # 🚀 Push image
       - name: Push Docker image
         run: docker push naimeshpatel5295/devnotes:latest
-
-
-
-# =====================================================
-# 🚀 CD JOB — AUTO DEPLOY TO EC2
-# =====================================================
-  deploy:
-    needs: test-build-push
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          timeout: 60s
-          command_timeout: 30m
-
-          script: |
-            echo "🚀 Starting deployment..."
-
-            # Pull latest image
-            docker pull naimeshpatel5295/devnotes:latest
-
-            # Go to app folder
-            cd /home/ec2-user/app
-
-            # Restart full docker compose stack
-            docker compose down
-            docker compose pull
-            docker compose up -d
-
-            echo "✅ Deployment completed!"
