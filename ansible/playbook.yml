@@ -1,6 +1,10 @@
 - name: Setup EC2 and deploy application
-  hosts: web
+  hosts: production
   become: true
+
+  vars:
+    docker_username: "{{ lookup('env', 'DOCKERHUB_USERNAME') }}"
+    docker_password: "{{ lookup('env', 'DOCKERHUB_TOKEN') }}"
 
   tasks:
     - name: Update packages
@@ -25,12 +29,14 @@
         groups: docker
         append: yes
 
+    - name: Login to Docker Hub
+      command: docker login -u {{ docker_username }} -p {{ docker_password }}
+
     - name: Install Git
       yum:
         name: git
         state: present
 
-    # Install Docker Compose v2 (plugin)
     - name: Create docker cli plugins directory
       file:
         path: /usr/libexec/docker/cli-plugins
@@ -43,7 +49,6 @@
         dest: /usr/libexec/docker/cli-plugins/docker-compose
         mode: '0755'
 
-    # Enable Buildx (comes bundled with Docker)
     - name: Enable Docker Buildx
       command: docker buildx install
 
@@ -60,6 +65,11 @@
       args:
         chdir: /home/ec2-user/app
       ignore_errors: true
+
+    - name: Pull latest Docker images
+      command: docker compose pull
+      args:
+        chdir: /home/ec2-user/app
 
     - name: Run Docker Compose
       command: docker compose up -d

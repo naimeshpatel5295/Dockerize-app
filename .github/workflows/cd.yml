@@ -1,4 +1,4 @@
-name: CD - Deploy to EC2
+name: CD - Deploy to EC2 (Ansible)
 
 on:
   workflow_run:
@@ -12,23 +12,29 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to EC2 via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          port: 22
-          timeout: 60s
-          command_timeout: 30m
+      # 1️⃣ Checkout repo so runner can access ansible folder
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-          script: |
-            echo "🚀 Starting deployment..."
+      # 2️⃣ Install Ansible on GitHub runner
+      - name: Install Ansible
+        run: |
+          sudo apt update
+          sudo apt install -y ansible
 
-            docker pull naimeshpatel5295/devnotes:latest
-            cd /home/ec2-user/app
-            docker compose down
-            docker compose pull
-            docker compose up -d
+      # 3️⃣ Setup SSH key for Ansible to connect EC2
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.EC2_HOST }} >> ~/.ssh/known_hosts
 
-            echo "✅ Deployment completed!"
+      # 4️⃣ Run Ansible Playbook 🚀
+      - name: Run Ansible Playbook
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/playbook.yml
